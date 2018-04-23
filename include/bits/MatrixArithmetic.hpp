@@ -205,6 +205,11 @@ namespace anpi
     // throw std::bad_function_call();
     // return regType();
     //}
+
+
+    template<typename T,class regType>
+      regType mm_mul(regType,regType);
+
     
 #ifdef __AVX512F__
     template<>
@@ -359,6 +364,72 @@ namespace anpi
     mm_add<std::int8_t>(__m128i a,__m128i b) {
       return _mm_add_epi32(a,b);
     }
+
+
+
+
+    //definitions of multiplications
+
+    template<>
+    inline __m128d __attribute__((__always_inline__))
+    mm_mul<double>(__m128d a,__m128d b) {
+      return _mm_mul_pd(a,b);
+    }
+    template<>
+    inline __m128 __attribute__((__always_inline__))
+    mm_mul<float>(__m128 a,__m128 b) {
+      return _mm_mul_ps(a,b);
+    }
+
+    template<>
+    inline __m128i __attribute__((__always_inline__))
+    mm_mul<std::uint32_t>(__m128i a,__m128i b) {
+      return _mm_mul_epi32(a,b);
+    }
+    
+    template<>
+    inline __m128i __attribute__((__always_inline__))
+    mm_mul<std::int16_t>(__m128i a,__m128i b) {
+      return _mm_mul_epi32(a,b);
+    }
+    
+    template<>
+    inline __m128i __attribute__((__always_inline__))
+    mm_mul<std::int8_t>(__m128i a,__m128i b) {
+      return _mm_mul_epi32(a,b);
+    }
+
+
+    //following functions aren't defined in sse2
+    /*
+    template<>
+    inline __m128i __attribute__((__always_inline__))
+    mm_mul<std::int32_t>(__m128i a,__m128i b) {
+      return _mm_mul_epi16(a,b);
+    }
+    template<>
+    inline __m128i __attribute__((__always_inline__))
+    mm_mul<std::uint16_t>(__m128i a,__m128i b) {
+      return _mm_mul_epi16(a,b);
+    }
+
+    template<>
+    inline __m128i __attribute__((__always_inline__))
+    mm_mul<std::uint64_t>(__m128i a,__m128i b) {
+      return _mm_mul_epi64(a,b);
+    }
+    template<>
+    inline __m128i __attribute__((__always_inline__))
+    mm_mul<std::int64_t>(__m128i a,__m128i b) {
+      return _mm_mul_epi64(a,b);
+    }
+    template<>
+    inline __m128i __attribute__((__always_inline__))
+    mm_mul<std::uint8_t>(__m128i a,__m128i b) {
+      return _mm_mul_epi16(a,b);
+    }
+    */
+    
 #endif
     
     // On-copy implementation c=a+b
@@ -389,6 +460,136 @@ namespace anpi
       }
       
     }
+
+
+    // On-copy implementation c=a*b
+    template<typename T,class Alloc,typename regType>
+    inline void mulSIMD(const Matrix<T,Alloc>& a, 
+                        const Matrix<T,Alloc>& b,
+                        Matrix<T,Alloc>& c) {
+
+      // This method is instantiated with unaligned allocators.  We
+      // allow the instantiation although externally this is never
+      // called unaligned
+      static_assert(!extract_alignment<Alloc>::aligned ||
+		    (extract_alignment<Alloc>::value >= sizeof(regType)),
+		    "Insufficient alignment for the registers used");
+      
+      //const size_t tentries = a.rows()*a.dcols();
+      c.allocate(a.rows(),a.cols());
+
+      regType* here        = reinterpret_cast<regType*>(c.data());
+      /*
+      const size_t  blocks = ( tentries*sizeof(T) + (sizeof(regType)-1) )/
+        sizeof(regType);
+      */
+      //regType *const end   = here + blocks;
+      
+      //const regType* aptr  = reinterpret_cast<const regType*>(a.data());
+      //const T * aptr = a.data();
+      //const T * a_end   = aptr + tentries;
+      
+      const regType* bptr  = reinterpret_cast<const regType*>(b.data());
+      //const regType* tmp;
+      //const T* btmp, *b_end;
+      regType val;
+
+      /*
+      for(size_t i = 0; i < a.rows();i++){
+          std::cout << "{ ";
+          for(size_t j = 0; j < a.cols();j++)
+            std::cout << a[i][j] << "\t";
+          std::cout << "}" << std::endl;
+      }
+
+      std::cout << "======================" << std::endl;
+
+      for(size_t i = 0; i < b.rows();i++){
+          std::cout << "{ ";
+          for(size_t j = 0; j < b.cols();j++)
+            std::cout << b[i][j] << "\t";
+          std::cout << "}" << std::endl;
+      }
+
+      */
+
+      size_t b_lim = column_correction<T,regType>(b.cols());
+      //size_t colw = colw<T,regType>();
+      //por cada fila
+      for (size_t a_row = 0; a_row < a.rows(); a_row++){
+        //std::cout << "mul lvl 1" <<std::endl;
+        bptr = reinterpret_cast<const regType*>(b.data());
+    		for(size_t b_col = 0; b_col < b_lim;b_col++){
+          //std::cout << "b_col: " << b_col << " b_lim: " << b_lim << std::endl;
+          //std::cout << "mul lvl 2 - iterations: " << b.cols()/(sizeof(regType)/sizeof(T)) <<std::endl;
+          //setear el valor inicial de val a cero
+          val = sse3_set1<T,regType>(T(0));
+          //el valor btmp guarda el puntero en b
+          /**
+           * btmp = bptr
+           * [x] [ ] [ ]
+           * [ ] [ ] [ ]
+           * [ ] [ ] [ ]
+           */
+          const regType* btmp  = bptr;
+          
+          //por cada elemento
+          for(size_t b_row = 0; b_row < b.rows();b_row++){
+            //std::cout << "b_row: " << b_row << " b.row: " << b.rows() << std::endl;
+            //std::cout << "mul lvl 3 - a value is: " << a[a_row][b_row] <<std::endl;
+            //quiero obtener el valor en la casilla aij
+            regType cell = sse3_set1<T,regType>(a[a_row][b_row]);
+
+            //que quiero multiplicar?
+            //multiplicar el valor de aij con el de bji
+            regType mul = mm_mul<T,regType>(cell,*btmp);
+        		val = mm_add<T,regType>(val,mul);
+            /*
+            std::cout<< "sz of rT: "<<  sizeof(regType) << " vector value: " << std::endl;
+            std::cout << "{ ";
+            for(size_t x = 0; x < sizeof(regType)/sizeof(T);x++)
+              std::cout << *(reinterpret_cast<const float*>(btmp) + x) << " ";
+            std::cout << "}\n";
+            */
+            //como obtener btmp
+            btmp  += b_lim;
+    			}
+          /**
+           * btmp = bptr
+           * [ ] [x] [ ]
+           * [ ] [ ] [ ]
+           * [ ] [ ] [ ]
+           */
+          bptr++;
+
+
+        	*here++ = val;
+
+          /*
+          std::cout << "========== c ===========" << std::endl;
+
+          for(size_t i = 0; i < c.rows();i++){
+            std::cout << "{ ";
+            for(size_t j = 0; j < c.cols();j++)
+              std::cout << c[i][j] << "\t";
+            std::cout << "}" << std::endl;
+          }
+
+          */
+
+    		}
+
+
+    	}
+      /*
+      std::cout << "========== x ===========" << std::endl;
+      std::cout << "========== x ===========" << std::endl;
+      std::cout << "========== x ===========" << std::endl;
+      std::cout << "========== x ===========" << std::endl;
+      //exit(0);      
+      */
+    }
+
        
     // On-copy implementation c=a+b for SIMD-capable types
     template<typename T,
@@ -416,6 +617,39 @@ namespace anpi
         ::anpi::fallback::add(a,b,c);
       }
     }
+
+
+
+
+    // On-copy implementation c=a*b for SIMD-capable types
+    template<typename T,
+	     class Alloc,
+	     typename std::enable_if<is_simd_type<T>::value,int>::type=0>
+    inline void multiply(const Matrix<T,Alloc>& a,
+                    const Matrix<T,Alloc>& b,
+                    Matrix<T,Alloc>& c) {
+
+
+
+      if (is_aligned_alloc<Alloc>::value) {        
+#ifdef __AVX512F__
+        mulSIMD<T,Alloc,typename avx512_traits<T>::reg_type>(a,b,c);
+#elif  __AVX__
+        mulSIMD<T,Alloc,typename avx_traits<T>::reg_type>(a,b,c);
+#elif  __SSE2__
+        mulSIMD<T,Alloc,typename sse2_traits<T>::reg_type>(a,b,c);
+#else
+        ::anpi::fallback::multiplication(a,b,c);
+#endif
+      } else { // allocator seems to be unaligned
+        ::anpi::fallback::multiplication(a,b,c);
+      }
+    }
+
+
+
+
+
 
     // Non-SIMD types such as complex
     template<typename T,
@@ -469,7 +703,8 @@ namespace anpi
     // Fall back implementations
 
     // In-copy implementation c=a*b
-    template<typename T,class Alloc>
+    template<typename T,class Alloc,
+             typename std::enable_if<!is_simd_type<T>::value,int>::type = 0>
     inline void multiply(const Matrix<T,Alloc>& a,
                          const Matrix<T,Alloc>& b,
                          Matrix<T,Alloc>& c) {

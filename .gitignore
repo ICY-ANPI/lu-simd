@@ -7,3 +7,4 @@ Debug/
 .externalToolBuilders/*
 *.txt
 col:
+.vscode/*
