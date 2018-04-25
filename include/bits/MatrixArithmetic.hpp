@@ -210,6 +210,15 @@ namespace anpi
     template<typename T,class regType>
       regType mm_mul(regType,regType);
 
+    template<typename T,class regType>
+      regType mm_hadd(regType,regType);
+
+    template<typename T,class regType>
+      regType mm_add_s(regType,regType);
+
+    template<typename T,class regType>
+      T mm_cvts(regType);
+
     
 #ifdef __AVX512F__
     template<>
@@ -368,6 +377,36 @@ namespace anpi
 
 
 
+
+
+    template<>
+    inline __m128d __attribute__((__always_inline__))
+    mm_hadd<double>(__m128d a,__m128d b) {
+      return _mm_hadd_pd(a,b);
+    }
+    template<>
+    inline __m128 __attribute__((__always_inline__))
+    mm_hadd<float>(__m128 a,__m128 b) {
+      return _mm_hadd_ps(a,b);
+    }
+
+
+
+
+    template<>
+    inline __m128d __attribute__((__always_inline__))
+    mm_add_s<double>(__m128d a,__m128d b) {
+      return _mm_add_sd(a,b);
+    }
+    template<>
+    inline __m128 __attribute__((__always_inline__))
+    mm_add_s<float>(__m128 a,__m128 b) {
+      return _mm_add_ss(a,b);
+    }
+
+
+
+
     //definitions of multiplications
 
     template<>
@@ -397,6 +436,20 @@ namespace anpi
     inline __m128i __attribute__((__always_inline__))
     mm_mul<std::int8_t>(__m128i a,__m128i b) {
       return _mm_mul_epi32(a,b);
+    }
+
+
+
+    template<>
+    inline float __attribute__((__always_inline__))
+    mm_cvts<float>(__m128 a) {
+      return _mm_cvtss_f32(a);
+    }
+
+        template<>
+    inline double __attribute__((__always_inline__))
+    mm_cvts<double>(__m128d a) {
+      return _mm_cvtsd_f64(a);
     }
 
 

@@ -45,10 +45,11 @@ namespace anpi {
     	std::vector<T> b({9,12,8}),x,result({-T(6)/T(5),-T(1)/T(5),T(52)/T(5)});
 
     	solver(A,x,b);
-    	const T eps = std::numeric_limits<T>::epsilon()*T(10);
+    	const T eps = std::numeric_limits<T>::epsilon()*T(100);
 
     	for (size_t i = 0; i < x.size(); i++) {
     		BOOST_CHECK(std::abs(x[i] - result[i]) < eps);
+			std::cout << "xi: " << x[i] << " res: " << result[i] << std::endl;
 		}
 
     }

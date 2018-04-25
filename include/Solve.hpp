@@ -27,17 +27,94 @@
 
 namespace anpi {
 
-template<typename T>
-bool solveLU( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T>& b){
 
-	try {
+#ifdef ANPI_ENABLE_SIMD
+#include "bits/MatrixArithmetic.hpp"
+#include "Intrinsics.hpp"
 
+using namespace anpi::simd;
+
+template<typename T,typename regType>
+bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T>& b){
+		
+		std::cout << "LUSIMD called" << std::endl;
 		std::vector<size_t> p;
 		Matrix<T> LU,L,U;
 		//Getting the LU matrix and p, the permutation vector
-		luDoolittle(A,LU,p);
-		unpackDoolittle(LU,L,U);
+		//luDoolittle(A,LU,p);
+		//unpackDoolittle(LU,L,U);
+		luCrout(A,LU,p);
+		unpackCrout(LU,L,U);
 
+		//creating a vector y where we'll save the result of y=Lx
+		std::vector<T> y;
+
+		x = std::vector<T>(A.rows());
+
+		T val;
+
+		size_t col_w =colw<T,regType>();
+		//L part
+		//We are writting the vector y here
+		for (size_t i = 0; i < A.rows(); i++) {
+			//we are accesing the position in permutation vector using b[p[i]]
+			regType * ptr = reinterpret_cast<regType*>(L[i]);
+			regType  val = sse3_set_s<T,regType>(b[p[i]]);
+			size_t j = 0;
+			size_t ic = reg_mul_value<T,regType>(i);
+			for(; j < ic; j+=col_w){
+				//if j != of i add
+				//if (j != i)
+				//y[j] is the previous found value
+				regType mul = mm_mul<T,regType>(*ptr,sse3_set1<T,regType>(T(-1)));
+				mul = mm_mul<T,regType>(mul,*reinterpret_cast<regType*>(&y[j]));
+				val = mm_add<T,regType>(val,mul);
+				ptr++;
+			}
+
+			for(; j < i; j++){
+				val = mm_add_s<T,regType>(val,sse3_set_s<T,regType>(T(-1)*y[j]*L[i][j]));
+			}
+			val = mm_hadd<T,regType>(val,val);
+			y.push_back(mm_cvts<T,regType>(val)/L[i][i]);
+		}
+
+
+		//U part
+		//now we'll do the same that previously done
+		//but, from the botton of matrix. because the matrix U have a single value at row k
+		//where k is the total of rows of the matrix.
+		for (size_t i = 0; i < A.rows(); i++) {
+			val = y[A.rows()- 1 - i];
+			for(size_t j = 0; j < i; j++){
+				if (j != i)
+					val -= U[A.rows()- 1 - i][A.rows()- 1 - j]*x[A.rows()- 1 - j];
+			}
+			val /= U[A.rows()- 1 - i][A.rows()- 1 - i];
+			x[A.rows()- 1 - i] = (val);
+		}
+		return true;
+
+
+
+
+
+
+
+}
+
+#endif
+
+
+template<typename T>
+bool solveLUAux( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T>& b){
+		std::vector<size_t> p;
+		Matrix<T> LU,L,U;
+		//Getting the LU matrix and p, the permutation vector
+		//luDoolittle(A,LU,p);
+		//unpackDoolittle(LU,L,U);
+		luCrout(A,LU,p);
+		unpackCrout(LU,L,U);
 
 		//creating a vector y where we'll save the result of y=Lx
 		std::vector<T> y;
@@ -48,6 +125,8 @@ bool solveLU( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T
 		T val;
 
 
+
+		
 		//L part
 		//We are writting the vector y here
 		for (size_t i = 0; i < A.rows(); i++) {
@@ -65,6 +144,7 @@ bool solveLU( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T
 			y.push_back(val);
 		}
 
+
 		//U part
 		//now we'll do the same that previously done
 		//but, from the botton of matrix. because the matrix U have a single value at row k
@@ -79,7 +159,25 @@ bool solveLU( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T
 			x[A.rows()- 1 - i] = (val);
 		}
 		return true;
+}
 
+template<typename T>
+bool solveLU( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T>& b){
+
+	try {
+		#ifdef ANPI_ENABLE_SIMD
+			#ifdef __SSE3__
+				std::cout << "LUSIMD called" << std::endl;
+				return solveLUSIMD<T,typename sse2_traits<T>::reg_type>(A,x ,b);
+			#else
+				std::cout << "LUSIMD isn't called called" << std::endl;
+				return solveLUAux<T>(A,x ,b);
+			#endif
+		#else
+			std::cout << "LUAux is called" << std::endl;
+			return solveLUAux<T>(A,x ,b);
+		#endif
+		
 	} catch (anpi::Exception &e) {
 		return false;
 	}

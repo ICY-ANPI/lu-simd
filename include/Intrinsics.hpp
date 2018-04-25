@@ -155,6 +155,23 @@ template<> inline __m128i __attribute__((__always_inline__))
 }
 
 
+
+
+
+template<typename T, typename U> U sse3_set_s(T value);
+
+template<> inline __m128d __attribute__((__always_inline__))
+  sse3_set_s<double,__m128d>(double value){
+    //std::cout << "in double" << std::endl;
+    return _mm_set_sd(value);
+}
+template<> inline __m128 __attribute__((__always_inline__))
+  sse3_set_s<float,__m128>(float value){
+    //std::cout << "in float" << std::endl;
+    return _mm_set_ss(value);
+}
+
+
 template<typename T, typename U> size_t colw(){
   return sizeof(U)/sizeof(T);
 }
@@ -165,6 +182,14 @@ template<typename T, typename U> size_t column_correction(size_t col_size){
   size_t colw = sizeof(U)/sizeof(T);
   if (col_size%colw == 0) b_lim = col_size/colw;
   else b_lim = (col_size + colw - (col_size%colw ))/colw;
+  return b_lim;
+}
+
+
+template<typename T, typename U> size_t reg_mul_value(size_t col_size){
+  size_t b_lim;
+  size_t colw = sizeof(U)/sizeof(T);
+  b_lim = (col_size - (col_size%colw ));
   return b_lim;
 }
 
