@@ -11,7 +11,8 @@
 #include "bits/MatrixArithmetic.hpp"
 
 #include <iostream>
-
+#include "Intrinsics.hpp"
+#include <type_traits>
 
 namespace anpi
 {
@@ -317,17 +318,68 @@ namespace anpi
     return *static_cast<const allocator_type*>(&this->_impl);
   }
   
+
+
+#ifdef ANPI_ENABLE_SIMD
+#ifdef __SSE3__
+
+template<class T, class Alloc,typename regType> 
+  void fillSIMDAux(T* ptrx, size_t entries,const T val){
+      regType el_tio_fill = sse3_set1<T, regType>(val);
+
+      regType * ptr = reinterpret_cast<regType*>(ptrx);
+      size_t pos = 0;
+      for (;pos < entries;){
+        *ptr++ = el_tio_fill;
+        pos+=sizeof(regType);
+      }
+
+}
+
+#endif
+#endif
+
+
+template<typename T, class Alloc,
+typename std::enable_if<is_simd_type<T>::value,int>::type = 0>
+void myfill(T* ptr, size_t entries,const T val){
+  if (is_aligned_alloc<Alloc>::value){
+    #ifdef ANPI_ENABLE_SIMD
+			#ifdef __SSE3__
+        fillSIMDAux<T,Alloc,typename sse2_traits<T>::reg_type>(ptr,entries,val);
+      #endif
+    #endif
+  }
+  else{
+    T* end = ptr + entries;
+    for (;ptr!=end;++ptr) {
+      *ptr = val;
+    }  
+  }
+
+
+}
+
+template<typename T, class Alloc,
+typename std::enable_if<!is_simd_type<T>::value,int>::type = 0>
+void myfill(T* ptr, size_t entries,const T val){
+  T* end = ptr + entries;
+  for (;ptr!=end;++ptr) {
+      *ptr = val;
+  }
+}
+
   template<typename T,class Alloc>
   void Matrix<T,Alloc>::fill(const T val) {
-
-
-    T* end = this->_impl._data + ( this->_impl._rows * this->_impl._dcols );
-    for (T* ptr = this->_impl._data;ptr!=end;++ptr) {
-      *ptr = val;
-    }
-
     // ACCELERATE ME!
+    myfill<T,Alloc>(this->_impl._data,this->_impl._rows * this->_impl._dcols,val);
   }
+
+  template<typename T,class Alloc>
+  void Matrix<T,Alloc>::fillaux(const T val) {
+    
+  }
+
 
   template<typename T,class Alloc>
   void Matrix<T,Alloc>::fill(const T* mem) {

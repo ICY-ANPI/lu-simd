@@ -113,7 +113,7 @@ namespace anpi
     /// The instance doing all the allocation work
     _Matrix_impl _impl;
 
-
+    void fillaux(const T val);
   public:
 
     /**

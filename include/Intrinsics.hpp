@@ -148,6 +148,13 @@ template<> inline __m128 __attribute__((__always_inline__))
 }
 
 
+template<> inline __m128i __attribute__((__always_inline__))
+  sse3_set1<int32_t,__m128i>(int32_t value){
+    //std::cout << "in int" << std::endl;
+    return _mm_set1_epi32(value);
+}
+
+
 template<typename T, typename U> size_t colw(){
   return sizeof(U)/sizeof(T);
 }
