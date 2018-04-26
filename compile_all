@@ -3,5 +3,5 @@
 #rm -rf build
 mkdir build
 cd build
-cmake ../ -DCMAKE_BUILD_TYPE=Debug -DANPI_ENABLE_SIMD=0
+cmake ../ -DCMAKE_BUILD_TYPE=Debug -DANPI_ENABLE_SIMD=1
 make
