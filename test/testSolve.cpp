@@ -54,6 +54,41 @@ namespace anpi {
 
     }
 
+	template<typename T>
+    void solverTest2(const std::function<void(const Matrix<T>&,
+                                         std::vector<T>&,
+										 const std::vector<T>&)>& solver) {
+
+    	anpi::Matrix<T> A;
+    	A.allocate(6,6);
+    	A = {{1,2,4,8,10,54},
+			 {65,66,66,85,55,66},
+			 {35,31,8,88,66,4},
+			 {58,44,66,87,6,5},
+			 {66,99,74,78,84,554},
+			 {87,56,84,65,71,68}
+			 
+			 };
+    	std::vector<T> b({37,13,66,64,84,6}),x,result({T(-1.38238373379),T(-3.26289178063),T(1.54533377877),T(2.09649074613),T(0.26131051497),T(0.35818150113)});
+		//Matrix<T> LU;
+		//std::vector<size_t> p;
+		//luDoolittle<T>(A,LU,p);
+    	solver(A,x,b);
+		/*
+		for(size_t i = 0 ; i < p.size();i++){
+			std::cout << p[i]<<" ";
+		}
+		std::cout << std::endl;
+		*/
+    	const T eps = std::numeric_limits<T>::epsilon()*T(20000);
+
+    	for (size_t i = 0; i < x.size(); i++) {
+    		BOOST_CHECK(std::abs(x[i] - result[i]) < eps);
+			//std::cout << "xi: " << x[i] << " res: " << result[i] << " abs: " << std::abs(x[i] - result[i]) << " eps " << eps<< std::endl;
+		}
+
+    }
+
 
     template<typename T>
     void invertTest(){
@@ -94,6 +129,8 @@ BOOST_AUTO_TEST_CASE(LUSolver)
 {
 	anpi::test::solverTest<float>(anpi::solveLU<float>);
 	anpi::test::solverTest<double>(anpi::solveLU<double>);
+	//anpi::test::solverTest2<float>(anpi::solveLU<float>);
+	anpi::test::solverTest2<double>(anpi::solveLU<double>);
 
 }
 
