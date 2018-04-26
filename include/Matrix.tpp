@@ -348,6 +348,11 @@ void myfill(T* ptr, size_t entries,const T val){
 			#ifdef __SSE3__
         fillSIMDAux<T,Alloc,typename sse2_traits<T>::reg_type>(ptr,entries,val);
       #endif
+    #else
+      T* end = ptr + entries;
+      for (;ptr!=end;++ptr) {
+        *ptr = val;
+      }
     #endif
   }
   else{

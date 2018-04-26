@@ -128,7 +128,7 @@ namespace anpi
 
     // In-copy implementation c=a*b
     template<typename T,class Alloc>
-    inline void multiplication(const Matrix<T,Alloc>& a,
+    inline void multiply(const Matrix<T,Alloc>& a,
     		const Matrix<T,Alloc>& b,
 			Matrix<T,Alloc>& c) {
 
@@ -151,7 +151,7 @@ namespace anpi
 
 
     template<typename T,class Alloc>
-    inline void multiplication(const Matrix<T,Alloc>& a,
+    inline void multiply(const Matrix<T,Alloc>& a,
     		const std::vector<T>& b,
 			Matrix<T,Alloc>& c) {
 
@@ -220,109 +220,7 @@ namespace anpi
       T mm_cvts(regType);
 
     
-#ifdef __AVX512F__
-    template<>
-    inline __m512d __attribute__((__always_inline__))
-    mm_add<double>(__m512d a,__m512d b) {
-      return _mm512_add_pd(a,b);
-    }
-    template<>
-    inline __m512 __attribute__((__always_inline__))
-    mm_add<float>(__m512 a,__m512 b) {
-      return _mm512_add_ps(a,b);
-    }
-    template<>
-    inline __m512i __attribute__((__always_inline__))
-    mm_add<uint64_t>(__m512i a,__m512i b) {
-      return _mm512_add_epi64(a,b);
-    }
-    template<>
-    inline __m512i __attribute__((__always_inline__))
-    mm_add<int64_t>(__m512i a,__m512i b) {
-      return _mm512_add_epi64(a,b);
-    }
-    template<>
-    inline __m512i __attribute__((__always_inline__))
-    mm_add<uint32_t>(__m512i a,__m512i b) {
-      return _mm512_add_epi32(a,b);
-    }
-    template<>
-    inline __m512i __attribute__((__always_inline__))
-    mm_add<int32_t>(__m512i a,__m512i b) {
-      return _mm512_add_epi32(a,b);
-    }
-    template<>
-    inline __m512i __attribute__((__always_inline__))
-    mm_add<uint16_t>(__m512i a,__m512i b) {
-      return _mm512_add_epi16(a,b);
-    }
-    template<>
-    inline __m512i __attribute__((__always_inline__))
-    mm_add<int16_t>(__m512i a,__m512i b) {
-      return _mm512_add_epi16(a,b);
-    }
-    template<>
-    inline __m512i __attribute__((__always_inline__))
-    mm_add<uint8_t>(__m512i a,__m512i b) {
-      return _mm512_add_epi8(a,b);
-    }
-    template<>
-    inline __m512i __attribute__((__always_inline__))
-    mm_add<int8_t>(__m512i a,__m512i b) {
-      return _mm512_add_epi8(a,b);
-    }
-#elif defined __AVX__
-    template<>
-    inline __m256d __attribute__((__always_inline__))
-    mm_add<double>(__m256d a,__m256d b) {
-      return _mm256_add_pd(a,b);
-    }
-    template<>
-    inline __m256 __attribute__((__always_inline__))
-    mm_add<float>(__m256 a,__m256 b) {
-      return _mm256_add_ps(a,b);
-    }
-    template<>
-    inline __m256i __attribute__((__always_inline__))
-    mm_add<uint64_t>(__m256i a,__m256i b) {
-      return _mm256_add_epi64(a,b);
-    }
-    template<>
-    inline __m256i __attribute__((__always_inline__))
-    mm_add<int64_t>(__m256i a,__m256i b) {
-      return _mm256_add_epi64(a,b);
-    }
-    template<>
-    inline __m256i __attribute__((__always_inline__))
-    mm_add<uint32_t>(__m256i a,__m256i b) {
-      return _mm256_add_epi32(a,b);
-    }
-    template<>
-    inline __m256i __attribute__((__always_inline__))
-    mm_add<int32_t>(__m256i a,__m256i b) {
-      return _mm256_add_epi32(a,b);
-    }
-    template<>
-    inline __m256i __attribute__((__always_inline__))
-    mm_add<uint16_t>(__m256i a,__m256i b) {
-      return _mm256_add_epi16(a,b);
-    }
-    template<>
-    inline __m256i __attribute__((__always_inline__))
-    mm_add<int16_t>(__m256i a,__m256i b) {
-      return _mm256_add_epi16(a,b);
-    }
-    template<>
-    inline __m256i __attribute__((__always_inline__))
-    mm_add<uint8_t>(__m256i a,__m256i b) {
-      return _mm256_add_epi8(a,b);
-    }
-    template<>
-    inline __m256i __attribute__((__always_inline__))
-    mm_add<int8_t>(__m256i a,__m256i b) {
-      return _mm256_add_epi8(a,b);
-    }
-#elif  defined __SSE2__
+#ifdef __SSE2__
     template<>
     inline __m128d __attribute__((__always_inline__))
     mm_add<double>(__m128d a,__m128d b) {
@@ -482,6 +380,110 @@ namespace anpi
       return _mm_mul_epi16(a,b);
     }
     */
+   
+   
+#elif defined __AVX__
+    template<>
+    inline __m256d __attribute__((__always_inline__))
+    mm_add<double>(__m256d a,__m256d b) {
+      return _mm256_add_pd(a,b);
+    }
+    template<>
+    inline __m256 __attribute__((__always_inline__))
+    mm_add<float>(__m256 a,__m256 b) {
+      return _mm256_add_ps(a,b);
+    }
+    template<>
+    inline __m256i __attribute__((__always_inline__))
+    mm_add<uint64_t>(__m256i a,__m256i b) {
+      return _mm256_add_epi64(a,b);
+    }
+    template<>
+    inline __m256i __attribute__((__always_inline__))
+    mm_add<int64_t>(__m256i a,__m256i b) {
+      return _mm256_add_epi64(a,b);
+    }
+    template<>
+    inline __m256i __attribute__((__always_inline__))
+    mm_add<uint32_t>(__m256i a,__m256i b) {
+      return _mm256_add_epi32(a,b);
+    }
+    template<>
+    inline __m256i __attribute__((__always_inline__))
+    mm_add<int32_t>(__m256i a,__m256i b) {
+      return _mm256_add_epi32(a,b);
+    }
+    template<>
+    inline __m256i __attribute__((__always_inline__))
+    mm_add<uint16_t>(__m256i a,__m256i b) {
+      return _mm256_add_epi16(a,b);
+    }
+    template<>
+    inline __m256i __attribute__((__always_inline__))
+    mm_add<int16_t>(__m256i a,__m256i b) {
+      return _mm256_add_epi16(a,b);
+    }
+    template<>
+    inline __m256i __attribute__((__always_inline__))
+    mm_add<uint8_t>(__m256i a,__m256i b) {
+      return _mm256_add_epi8(a,b);
+    }
+    template<>
+    inline __m256i __attribute__((__always_inline__))
+    mm_add<int8_t>(__m256i a,__m256i b) {
+      return _mm256_add_epi8(a,b);
+    }
+#elif  defined __AVX512F__
+    template<>
+    inline __m512d __attribute__((__always_inline__))
+    mm_add<double>(__m512d a,__m512d b) {
+      return _mm512_add_pd(a,b);
+    }
+    template<>
+    inline __m512 __attribute__((__always_inline__))
+    mm_add<float>(__m512 a,__m512 b) {
+      return _mm512_add_ps(a,b);
+    }
+    template<>
+    inline __m512i __attribute__((__always_inline__))
+    mm_add<uint64_t>(__m512i a,__m512i b) {
+      return _mm512_add_epi64(a,b);
+    }
+    template<>
+    inline __m512i __attribute__((__always_inline__))
+    mm_add<int64_t>(__m512i a,__m512i b) {
+      return _mm512_add_epi64(a,b);
+    }
+    template<>
+    inline __m512i __attribute__((__always_inline__))
+    mm_add<uint32_t>(__m512i a,__m512i b) {
+      return _mm512_add_epi32(a,b);
+    }
+    template<>
+    inline __m512i __attribute__((__always_inline__))
+    mm_add<int32_t>(__m512i a,__m512i b) {
+      return _mm512_add_epi32(a,b);
+    }
+    template<>
+    inline __m512i __attribute__((__always_inline__))
+    mm_add<uint16_t>(__m512i a,__m512i b) {
+      return _mm512_add_epi16(a,b);
+    }
+    template<>
+    inline __m512i __attribute__((__always_inline__))
+    mm_add<int16_t>(__m512i a,__m512i b) {
+      return _mm512_add_epi16(a,b);
+    }
+    template<>
+    inline __m512i __attribute__((__always_inline__))
+    mm_add<uint8_t>(__m512i a,__m512i b) {
+      return _mm512_add_epi8(a,b);
+    }
+    template<>
+    inline __m512i __attribute__((__always_inline__))
+    mm_add<int8_t>(__m512i a,__m512i b) {
+      return _mm512_add_epi8(a,b);
+    }
     
 #endif
     
@@ -657,11 +659,7 @@ namespace anpi
 
 
       if (is_aligned_alloc<Alloc>::value) {        
-#ifdef __AVX512F__
-        addSIMD<T,Alloc,typename avx512_traits<T>::reg_type>(a,b,c);
-#elif  __AVX__
-        addSIMD<T,Alloc,typename avx_traits<T>::reg_type>(a,b,c);
-#elif  __SSE2__
+#ifdef __SSE2__
         addSIMD<T,Alloc,typename sse2_traits<T>::reg_type>(a,b,c);
 #else
         ::anpi::fallback::add(a,b,c);
@@ -671,7 +669,19 @@ namespace anpi
       }
     }
 
+template<class M>
+void printMat2(M c){
+	std::cout << "MATRIX START HERE!" << std::endl;
+	std::cout << "==================="<< std::endl;
 
+	for (size_t i = 0; i < c.rows(); i++){
+		for(size_t j = 0; j < c.cols();j++){
+			std::cout << c[i][j] << "\t";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << "==================="<< std::endl;
+}
 
 
     // On-copy implementation c=a*b for SIMD-capable types
@@ -685,17 +695,23 @@ namespace anpi
 
 
       if (is_aligned_alloc<Alloc>::value) {        
-#ifdef __AVX512F__
-        mulSIMD<T,Alloc,typename avx512_traits<T>::reg_type>(a,b,c);
-#elif  __AVX__
-        mulSIMD<T,Alloc,typename avx_traits<T>::reg_type>(a,b,c);
-#elif  __SSE2__
+#ifdef __SSE2__
+        mulSIMD<T,Alloc,typename sse2_traits<T>::reg_type>(a,b,c);
+        std::cout << "matrix A" << std::endl;
+        printMat2<Matrix<T,Alloc>>(a);
+        std::cout << "matrix B" << std::endl;
+        printMat2<Matrix<T,Alloc>>(b);
+        std::cout << "matrix C" << std::endl;
+        printMat2<Matrix<T,Alloc>>(c);
+        ::anpi::fallback::multiply(a,b,c);
+        std::cout << "matrix C'" << std::endl;
+        printMat2<Matrix<T,Alloc>>(c);
         mulSIMD<T,Alloc,typename sse2_traits<T>::reg_type>(a,b,c);
 #else
-        ::anpi::fallback::multiplication(a,b,c);
+        ::anpi::fallback::multiply(a,b,c);
 #endif
       } else { // allocator seems to be unaligned
-        ::anpi::fallback::multiplication(a,b,c);
+        ::anpi::fallback::multiply(a,b,c);
       }
     }
 
@@ -761,7 +777,7 @@ namespace anpi
     inline void multiply(const Matrix<T,Alloc>& a,
                          const Matrix<T,Alloc>& b,
                          Matrix<T,Alloc>& c) {
-      ::anpi::fallback::multiplication(a,b,c);
+      ::anpi::fallback::multiply(a,b,c);
     }
 
 
@@ -769,7 +785,7 @@ namespace anpi
     inline void multiply(const Matrix<T,Alloc>& a,
                          const std::vector<T>& b,
                          Matrix<T,Alloc>& c) {
-      ::anpi::fallback::multiplication(a,b,c);
+      ::anpi::fallback::multiply(a,b,c);
     }
 
 
