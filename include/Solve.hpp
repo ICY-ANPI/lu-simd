@@ -41,13 +41,13 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 		std::vector<size_t> p;
 		Matrix<T> LU,L,U;
 		//Getting the LU matrix and p, the permutation vector
-		//luDoolittle(A,LU,p);
-		//unpackDoolittle(LU,L,U);
-		luCrout(A,LU,p);
-		unpackCrout(LU,L,U);
+		luDoolittle(A,LU,p);
+		unpackDoolittle(LU,L,U);
+		//luCrout(A,LU,p);
+		//unpackCrout(LU,L,U);
 
 		//creating a vector y where we'll save the result of y=Lx
-		std::vector<T> y;
+		std::vector<T,anpi::aligned_row_allocator<T>> y(A.rows());
 
 		x = std::vector<T>(A.rows());
 
@@ -56,27 +56,37 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 		size_t col_w =colw<T,regType>();
 		//L part
 		//We are writting the vector y here
-		for (size_t i = 0; i < A.rows(); i++) {
+		for (size_t i = 0; i < L.rows(); i++) {
+			std::cout << "L PART" << std::endl;
 			//we are accesing the position in permutation vector using b[p[i]]
 			regType * ptr = reinterpret_cast<regType*>(L[i]);
 			regType  val = sse3_set_s<T,regType>(b[p[i]]);
 			size_t j = 0;
 			size_t ic = reg_mul_value<T,regType>(i);
+			//size_t ic = column_correction<T,regType>(b.dcols());
 			for(; j < ic; j+=col_w){
 				//if j != of i add
 				//if (j != i)
 				//y[j] is the previous found value
 				regType mul = mm_mul<T,regType>(*ptr,sse3_set1<T,regType>(T(-1)));
-				mul = mm_mul<T,regType>(mul,*reinterpret_cast<regType*>(&y[j]));
+				std::cout << "ITERATION 1: " << j << " OF " << ic << std::endl;
+				for (size_t k = 0;  k < y.size(); k++) std::cout << y[k] << " ";
+				std::cout << std::endl;
+				std::cout << "DIR IS: " << *(&y.front() + j) << " SIZE OF T IS: " << sizeof(T)<< std::endl;
+				regType * tmpreg = reinterpret_cast<regType*>(&y.front() + j);
+				std::cout << "TMP REG IS DEFINED\n";
+				mul = mm_mul<T,regType>(mul,*tmpreg);
+				std::cout << "ITERATION 2: " << j << " OF " << ic << std::endl;
 				val = mm_add<T,regType>(val,mul);
+				std::cout << "ITERATION 3: " << j << " OF " << ic << std::endl;
 				ptr++;
 			}
-
+			std::cout << "L PART 2" << std::endl;
 			for(; j < i; j++){
 				val = mm_add_s<T,regType>(val,sse3_set_s<T,regType>(T(-1)*y[j]*L[i][j]));
 			}
 			val = mm_hadd<T,regType>(val,val);
-			y.push_back(mm_cvts<T,regType>(val)/L[i][i]);
+			y[i] = (mm_cvts<T,regType>(val)/L[i][i]);
 		}
 
 

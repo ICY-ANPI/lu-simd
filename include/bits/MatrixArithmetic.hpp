@@ -532,14 +532,13 @@ namespace anpi
       
       //const size_t tentries = a.rows()*a.dcols();
       c.allocate(a.rows(),a.cols());
+      c.fill(T(0));
 
       regType* here        = reinterpret_cast<regType*>(c.data());
-      /*
-      const size_t  blocks = ( tentries*sizeof(T) + (sizeof(regType)-1) )/
+      /*const size_t  blocks = ( tentries*sizeof(T) + (sizeof(regType)-1) )/
         sizeof(regType);
+      regType *const end   = here + blocks;
       */
-      //regType *const end   = here + blocks;
-      
       //const regType* aptr  = reinterpret_cast<const regType*>(a.data());
       //const T * aptr = a.data();
       //const T * a_end   = aptr + tentries;
@@ -548,27 +547,26 @@ namespace anpi
       //const regType* tmp;
       //const T* btmp, *b_end;
       regType val;
-
       /*
-      for(size_t i = 0; i < a.rows();i++){
-          std::cout << "{ ";
-          for(size_t j = 0; j < a.cols();j++)
-            std::cout << a[i][j] << "\t";
-          std::cout << "}" << std::endl;
+      std::cout << "cols: " << b.cols() << " d cols: " << b.dcols() <<" t:" << b.cols() + b.dcols() << std::endl;
+
+      for(size_t i = 0; i < b.rows();i++){
+        std::cout << "{ ";
+        for(size_t j = 0; j < b.dcols();j+=colw<T,regType>()){
+          for(size_t k = 0; k < colw<T,regType>();k++){
+            std::cout << *((T*)bptr + k) << " ";
+          }
+          //std::cout << std::endl;
+          bptr++;
+        }
+        std::cout << "}" << std::endl;
       }
 
       std::cout << "======================" << std::endl;
-
-      for(size_t i = 0; i < b.rows();i++){
-          std::cout << "{ ";
-          for(size_t j = 0; j < b.cols();j++)
-            std::cout << b[i][j] << "\t";
-          std::cout << "}" << std::endl;
-      }
-
       */
-
-      size_t b_lim = column_correction<T,regType>(b.cols());
+      bptr  = reinterpret_cast<const regType*>(b.data());
+      
+      size_t b_lim = column_correction<T,regType>(b.dcols());
       //size_t colw = colw<T,regType>();
       //por cada fila
       for (size_t a_row = 0; a_row < a.rows(); a_row++){
@@ -696,17 +694,18 @@ void printMat2(M c){
 
       if (is_aligned_alloc<Alloc>::value) {        
 #ifdef __SSE2__
-        mulSIMD<T,Alloc,typename sse2_traits<T>::reg_type>(a,b,c);
+        /*
         std::cout << "matrix A" << std::endl;
         printMat2<Matrix<T,Alloc>>(a);
         std::cout << "matrix B" << std::endl;
         printMat2<Matrix<T,Alloc>>(b);
-        std::cout << "matrix C" << std::endl;
-        printMat2<Matrix<T,Alloc>>(c);
         ::anpi::fallback::multiply(a,b,c);
         std::cout << "matrix C'" << std::endl;
         printMat2<Matrix<T,Alloc>>(c);
+        */
         mulSIMD<T,Alloc,typename sse2_traits<T>::reg_type>(a,b,c);
+        //std::cout << "matrix C" << std::endl;
+        //printMat2<Matrix<T,Alloc>>(c);        
 #else
         ::anpi::fallback::multiply(a,b,c);
 #endif
