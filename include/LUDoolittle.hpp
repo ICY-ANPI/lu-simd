@@ -158,7 +158,7 @@ void luSwapRowsSIMD(Matrix<T>& LU,size_t r1,size_t r2){
 template<typename T, typename Reg>
 void luDoolittleSIMD(const Matrix<T>& A,Matrix<T>& LU, std::vector<size_t>& permut){
 	
-	std::cout << "LU DOOLITTLE!" << std::endl;
+	//std::cout << "LU DOOLITTLE!" << std::endl;
 	//std::cout << "SIMD ENABLE" << std::endl;
 	//throw anpi::Exception("To be implemented yet");
 	//setting the permut vector as 1,2,3,4.... n-1, with n the size of matrix nxn
@@ -246,7 +246,7 @@ void luDoolittleSIMD(const Matrix<T>& A,Matrix<T>& LU, std::vector<size_t>& perm
 
 	}
 
-	std::cout << "LU FINISHED!" << std::endl;
+	//std::cout << "LU FINISHED!" << std::endl;
 }
 #endif
 #endif
@@ -254,7 +254,7 @@ void luDoolittleSIMD(const Matrix<T>& A,Matrix<T>& LU, std::vector<size_t>& perm
 template<typename T>
 void luDoolittleAnpi(const Matrix<T>& A, Matrix<T>& LU, std::vector<size_t>& permut){
 
-std::cout << "SIMD NOT ENABLE" << std::endl;
+	//std::cout << "SIMD NOT ENABLE" << std::endl;
 	//setting the permut vector as 1,2,3,4.... n-1, with n the size of matrix nxn
 	for (size_t x = 0; x < A.rows();x++)
 		permut.push_back(x);

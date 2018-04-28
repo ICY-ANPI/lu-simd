@@ -76,7 +76,7 @@ public:
   // Evaluate add in-place
   inline void eval() {
     //anpi::simd::add(this->_a,this->_b);
-	  anpi::luCrout(this->_a,this->_LU,this->_p);
+	  anpi::luDoolittleSIMD<T,typename sse3_traits<T>::reg_type>(this->_a,this->_LU,this->_p);
   }
 };
 
@@ -89,7 +89,7 @@ public:
 
   // Evaluate add on-copy
   inline void eval() {
-	  anpi::luDoolittle(this->_a,this->_LU,this->_p);
+	  anpi::luDoolittleAnpi(this->_a,this->_LU,this->_p);
   }
 };
 
@@ -100,8 +100,8 @@ BOOST_AUTO_TEST_CASE( Descomposition ) {
 
   std::vector<size_t> sizes = {  24,  32,  48,  64,
                                  96, 128, 192, 256,
-                                384, 512, 768,1024,
-                               1536,2048,3072,4096};
+                                384, 512, 768,1024};//,
+                               //1536};//,2048,3072,4096};
 
   const size_t n=sizes.back();
   const size_t repetitions=100;
@@ -109,23 +109,22 @@ BOOST_AUTO_TEST_CASE( Descomposition ) {
 
 
   {
-	benchLUDoolittle<float>  baoc(n);
+	benchLUDoolittle<double>  baoc(n);
 
     // Measure on-copy add
     ANPI_BENCHMARK(sizes,repetitions,times,baoc);
 
-    ::anpi::benchmark::write("add_on_copy_float_simd.txt",times);
-    ::anpi::benchmark::plotRange(times,"On-copy (float) simd","g");
+    ::anpi::benchmark::write("lu_doolittle_anpi.txt",times);
+    ::anpi::benchmark::plotRange(times,"lu (double)","g");
   }
-
   {
-	benchLUCrout<float> baip(n);
+	benchLUCrout<double> baip(n);
 
     // Measure in place add
     ANPI_BENCHMARK(sizes,repetitions,times,baip);
 
-    ::anpi::benchmark::write("add_in_place_float_simd.txt",times);
-    ::anpi::benchmark::plotRange(times,"In-place (float) simd","m");
+    ::anpi::benchmark::write("lu_doolittle_simd.txt",times);
+    ::anpi::benchmark::plotRange(times," lu (double) simd","m");
   }
 
 #if 0
