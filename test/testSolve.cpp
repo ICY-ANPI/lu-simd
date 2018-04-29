@@ -84,7 +84,7 @@ namespace anpi {
 
     	for (size_t i = 0; i < x.size(); i++) {
     		BOOST_CHECK(std::abs(x[i] - result[i]) < eps);
-			//std::cout << "xi: " << x[i] << " res: " << result[i] << " abs: " << std::abs(x[i] - result[i]) << " eps " << eps<< std::endl;
+			std::cout << "xi: " << x[i] << " res: " << result[i] << " abs: " << std::abs(x[i] - result[i]) << " eps " << eps<< std::endl;
 		}
 
     }

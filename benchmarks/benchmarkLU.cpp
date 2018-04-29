@@ -65,7 +65,6 @@ public:
   }
 };
 
-
 /// Provide the evaluation method for in-place addition
 template<typename T>
 class benchLUCrout : public benchDescomposition<T> {
@@ -76,7 +75,11 @@ public:
   // Evaluate add in-place
   inline void eval() {
     //anpi::simd::add(this->_a,this->_b);
+    #ifdef ANPI_ENABLE_SIMD
 	  anpi::luDoolittleSIMD<T,typename sse3_traits<T>::reg_type>(this->_a,this->_LU,this->_p);
+    #else
+    anpi::luDoolittleAnpi(this->_a,this->_LU,this->_p);
+    #endif
   }
 };
 
@@ -92,6 +95,8 @@ public:
 	  anpi::luDoolittleAnpi(this->_a,this->_LU,this->_p);
   }
 };
+
+
 
 /**
  * Instantiate and test the methods of the Matrix class
@@ -127,7 +132,9 @@ BOOST_AUTO_TEST_CASE( Descomposition ) {
     ::anpi::benchmark::plotRange(times," lu (double) simd","m");
   }
 
+/*
 #if 0
+
 
   {
 	benchLUDoolittle<double>  baoc(n);
@@ -148,7 +155,9 @@ BOOST_AUTO_TEST_CASE( Descomposition ) {
     ::anpi::benchmark::write("decomposition_in_place_double.txt",times);
     ::anpi::benchmark::plotRange(times,"In-place (double)","m");
   }
+
 #endif
+*/
 
   ::anpi::benchmark::show();
 }

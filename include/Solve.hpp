@@ -37,8 +37,10 @@ using namespace anpi::simd;
 template<typename T,typename regType>
 bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T>& b){
 		
-		std::cout << "LUSIMD called" << std::endl;
+		//Instance of  permut vector
 		std::vector<size_t> p;
+		//Instance of Matrices LU, L and U
+		//Where LU is the packed matrix, L and U are the unpacked
 		Matrix<T> LU,L,U;
 		//Getting the LU matrix and p, the permutation vector
 		luDoolittle(A,LU,p);
@@ -49,39 +51,29 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 		//creating a vector y where we'll save the result of y=Lx
 		std::vector<T,anpi::aligned_row_allocator<T>> y(A.rows());
 
-		x = std::vector<T>(A.rows());
+		x = std::vector<T>(A.dcols());
+		std::fill(x.begin(),x.end(),T(0));
 
-		T val;
+		regType  val;
 
 		size_t col_w =colw<T,regType>();
+		regType minus_one = sse3_set1<T,regType>(T(-1));
+		regType * ptr;
+		regType * x_val;
 		//L part
 		//We are writting the vector y here
 		for (size_t i = 0; i < L.rows(); i++) {
-			std::cout << "L PART" << std::endl;
 			//we are accesing the position in permutation vector using b[p[i]]
-			regType * ptr = reinterpret_cast<regType*>(L[i]);
-			regType  val = sse3_set_s<T,regType>(b[p[i]]);
+			ptr = reinterpret_cast<regType*>(L[i]);
+			val = sse3_set_s<T,regType>(b[p[i]]);
 			size_t j = 0;
 			size_t ic = reg_mul_value<T,regType>(i);
-			//size_t ic = column_correction<T,regType>(b.dcols());
 			for(; j < ic; j+=col_w){
-				//if j != of i add
-				//if (j != i)
-				//y[j] is the previous found value
-				regType mul = mm_mul<T,regType>(*ptr,sse3_set1<T,regType>(T(-1)));
-				std::cout << "ITERATION 1: " << j << " OF " << ic << std::endl;
-				for (size_t k = 0;  k < y.size(); k++) std::cout << y[k] << " ";
-				std::cout << std::endl;
-				std::cout << "DIR IS: " << *(&y.front() + j) << " SIZE OF T IS: " << sizeof(T)<< std::endl;
-				regType * tmpreg = reinterpret_cast<regType*>(&y.front() + j);
-				std::cout << "TMP REG IS DEFINED\n";
-				mul = mm_mul<T,regType>(mul,*tmpreg);
-				std::cout << "ITERATION 2: " << j << " OF " << ic << std::endl;
+				regType mul = mm_mul<T,regType>(*ptr++,minus_one);
+				x_val = reinterpret_cast<regType*>(&y.front() + j);
+				mul = mm_mul<T,regType>(mul,*x_val++);
 				val = mm_add<T,regType>(val,mul);
-				std::cout << "ITERATION 3: " << j << " OF " << ic << std::endl;
-				ptr++;
 			}
-			std::cout << "L PART 2" << std::endl;
 			for(; j < i; j++){
 				val = mm_add_s<T,regType>(val,sse3_set_s<T,regType>(T(-1)*y[j]*L[i][j]));
 			}
@@ -94,15 +86,25 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 		//now we'll do the same that previously done
 		//but, from the botton of matrix. because the matrix U have a single value at row k
 		//where k is the total of rows of the matrix.
-		for (size_t i = 0; i < A.rows(); i++) {
-			val = y[A.rows()- 1 - i];
-			for(size_t j = 0; j < i; j++){
-				if (j != i)
-					val -= U[A.rows()- 1 - i][A.rows()- 1 - j]*x[A.rows()- 1 - j];
+		for (size_t i = U.rows()-1; i < U.rows(); i--) {
+			val = sse3_set_s<T,regType>(y[i]);
+			size_t j  = U.dcols() - col_w;
+			ptr= reinterpret_cast<regType*>(U[i] + j);
+			x_val = reinterpret_cast<regType*>( (x.data() + j));
+			//Por el momento J va a irse hasta cero
+			for(; j > i - i%col_w + col_w -1 ; j-=col_w){
+				regType mul = mm_mul<T,regType>(*ptr--,minus_one);	
+				mul = mm_mul<T,regType>(mul,*x_val--);
+				val = mm_add<T,regType>(val,mul);
 			}
-			val /= U[A.rows()- 1 - i][A.rows()- 1 - i];
-			x[A.rows()- 1 - i] = (val);
+			for(size_t k = i+1; k < j + col_w && k < U.cols(); k++){
+				val = mm_add_s<T,regType>(val,sse3_set_s<T,regType>(T(-1)*x[k]*U[i][k]));
+			}
+
+			val = mm_hadd<T,regType>(val,val);
+			x[i] = (mm_cvts<T,regType>(val))/(U[i][i]);
 		}
+		for(size_t k = U.dcols(); k > U.cols(); k--)x.pop_back();
 		return true;
 
 
@@ -177,14 +179,11 @@ bool solveLU( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T
 	try {
 		#ifdef ANPI_ENABLE_SIMD
 			#ifdef __SSE3__
-				std::cout << "LUSIMD called" << std::endl;
 				return solveLUSIMD<T,typename sse2_traits<T>::reg_type>(A,x ,b);
 			#else
-				std::cout << "LUSIMD isn't called called" << std::endl;
 				return solveLUAux<T>(A,x ,b);
 			#endif
 		#else
-			std::cout << "LUAux is called" << std::endl;
 			return solveLUAux<T>(A,x ,b);
 		#endif
 		
