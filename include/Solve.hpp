@@ -34,6 +34,8 @@ namespace anpi {
 
 using namespace anpi::simd;
 
+
+
 template<typename T,typename regType>
 bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T>& b){
 		
@@ -43,12 +45,14 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 		//Where LU is the packed matrix of L and U matrices
 		Matrix<T> LU;
 		//Getting the LU matrix and p, the permutation vector
-		luDoolittle(A,LU,p);
 		//isDoolittle allow to do the doolittle method or crout method
 		//true if is doolittle method
 		//false if not.
+		
+		luDoolittle(A,LU,p);
 		bool isDoolittle = true;
 		//luCrout(A,LU,p);
+		
 		//bool isDoolittle = false;
 
 		//creating a vector y where we'll save the result of y=Lx
@@ -77,6 +81,26 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 		//would be saved
 		regType mul;
 
+		//y[0] = b[p[0]];
+
+		/*
+		printMat<Matrix<T>>(A);
+		printMat<Matrix<T>>(LU);
+
+
+		std::cout << "b = {";
+		for(size_t e = 0; e < b.size()-1; e++) cout << b[e] << ", ";
+		std::cout << b[b.size()-1] << "}" << std::endl;
+
+		std::cout << "b permuted = {";
+		for(size_t e = 0; e < b.size()-1; e++) cout << b[p[e]] << ", ";
+		std::cout << b[p[b.size()-1]] << "}" << std::endl;
+
+
+		std::cout << "L PART IS WORKING NOW!" << endl;
+		std::cout << "================================================" << endl;
+		*/
+
 		//L part
 		//We are writting the vector "y" here
 		for (size_t i = 0; i < LU.rows(); i++) {
@@ -88,6 +112,9 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 			//Example for float: [0 0 0 x] 
 			//Example for double [0 x]
 			val = sse3_set_s<T,regType>(b[p[i]]);
+			
+			//std::cout << "b[p[i]]: "<< b[p[i]] << endl;
+			
 			size_t j = 0;
 			//ic the previous value of "i" which is a multiplier of col_w 
 			//For example, if i is 5 and col_w is 4 ic is going to take the value of 4
@@ -96,29 +123,83 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 
 			//is the pointer which explore the y vector
 			x_val = reinterpret_cast<regType*>(&y.front());
-
 			//for each j, where j is col_w * k, where k is the number of repetitions
 			for(; j < ic; j+=col_w){
+				/*
+				std::cout << "j is: " << j << " ic is: " << ic << std::endl;
+				std::cout << "ptr vector: {";
+				for(size_t e = 0; e < col_w-1; e++)cout << *((T*)ptr+e) << ", ";
+				std::cout <<  *((T*)ptr+col_w-1) << "}" << std::endl;
+				std::cout << "x_val vector: {";
+				for(size_t e = 0; e < col_w-1; e++)cout << *((T*)x_val+e) << ", ";
+				std::cout <<  *((T*)x_val+col_w-1) << "}" << std::endl;
+				*/
 				//change the sign of values in ptr
 				mul = mm_mul<T,regType>(*ptr++,minus_one);
+				
+				/*
+				std::cout << "-ptr vector: {";
+				for(size_t e = 0; e < col_w-1; e++)cout << *((T*)&mul+e) << ", ";
+				std::cout <<  *((T*)&mul+col_w-1) << "}" << std::endl;
+				*/
+
 				//saving a vector of "- LU[k] * y[k]" in mul 
+				
 				mul = mm_mul<T,regType>(mul,*x_val++);
+				/*
+				std::cout << "mul vector: {";
+				for(size_t e = 0; e < col_w-1; e++)cout << *((T*)&mul+e) << ", ";
+				std::cout <<  *((T*)&mul+col_w-1) << "}" << std::endl;
+				*/
 				//updating the value of  val
 				val = mm_add<T,regType>(val,mul);
+
+				/*
+				std::cout << "val vector: {";
+				for(size_t e = 0; e < col_w-1; e++)cout << *((T*)&val+e) << ", ";
+				std::cout <<  *((T*)&val+col_w-1) << "}" << std::endl;
+				*/
 			}
 			//for the values between ic and i do the same but i by 1
 			for(; j < i; j++){
+				//std::cout << "y[" << j << "] is: " << y[j] << " LU: " << LU[i][j] << endl;
 				val = mm_add_s<T,regType>(val,sse3_set_s<T,regType>(T(-1)*y[j]*LU[i][j]));
 			}
+			//std::cout << "=================" << endl;
+			
 			//values in val do an horizontal addition
-			//val[0] + val[1] + val[2] ...
-			val = mm_hadd<T,regType>(val,val);
+			//val[0] + val[1] + val[2] ... 
+			//for(size_t r = 1; r < col_w; r*=2)
+			//	val = mm_hadd<T,regType>(val,val);
+			T tmp = T(0);
+			for(size_t e = 0; e < col_w; e++) tmp += *((T*)&val+e);
+
+			/*
+			std::cout << "val vector: {";
+			for(size_t e = 0; e < col_w-1; e++)cout << *((T*)&val+e) << ", ";
+			std::cout <<  *((T*)&val+col_w-1) << "}" << std::endl;
+			*/			
+			y[i] = tmp;
+
 			//cast the value of val to T value and save it in y[i]
-			y[i] = (mm_cvts<T,regType>(val));
+			//y[i] = (mm_cvts<T,regType>(val));
+			
+			//std::cout << ">> y[" << i << "] is: " << y[i] << endl;
+			
 			//and if is a doolittle method divide by LU[i][i]
 			if (!isDoolittle) y[i] = y[i]/LU[i][i];
 		}
+		/*
+		std::cout << "====================================================" << endl;
 
+		std::cout << "U PART IS WORKING NOW!" << endl;
+
+		std::cout << "y = {";
+		for(size_t e = 0; e < y.size()-1; e++)cout << y[e] << ", ";
+		std::cout << y[y.size()-1] << "}" << std::endl;
+
+		std::cout << "====================================================" << endl;
+		*/
 
 		//U part
 		//now we'll do the same that previously done
@@ -135,24 +216,61 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 			//it is:
 			//x -= LU[k]*x[k] + LU[k-1]*x[k-1] + ... LU[ic]*x[ic] 
 			for(; j > ic ; j-=col_w){
+				/*
+				std::cout << "j is: " << j << " ic is: " << ic << std::endl;
+				std::cout << "ptr vector: {";
+				for(size_t e = 0; e < col_w-1; e++)cout << *((T*)ptr+e) << ", ";
+				std::cout <<  *((T*)ptr+col_w-1) << "}" << std::endl;
+
+				std::cout << "x_val vector: {";
+				for(size_t e = 0; e < col_w-1; e++)cout << *((T*)x_val+e) << ", ";
+				std::cout <<  *((T*)x_val+col_w-1) << "}" << std::endl;
+				*/
+
 				mul = mm_mul<T,regType>(*ptr--,minus_one);	
 				mul = mm_mul<T,regType>(mul,*x_val--);
+				/*	
+				std::cout << "mul vector: {";
+				for(size_t e = 0; e < col_w-1; e++)cout << *((T*)&mul+e) << ", ";
+				std::cout <<  *((T*)&mul+col_w-1) << "}" << std::endl;
+				*/
 				val = mm_add<T,regType>(val,mul);
+				/*
+				std::cout << "val vector: {";
+				for(size_t e = 0; e < col_w-1; e++)cout << *((T*)&val+e) << ", ";
+				std::cout <<  *((T*)&val+col_w-1) << "}" << std::endl;
+				*/
 			}
 			//x -= LU[i+1] + ... + LU[ic-1]*x[ic-1]
 			for(size_t k = i+1; k < j + col_w && k < LU.cols(); k++){
+				//std::cout << "x[" << k << "] is: " << x[k] << " LU: " << LU[i][k] << endl;
+				
 				val = mm_add_s<T,regType>(val,sse3_set_s<T,regType>(T(-1)*x[k]*LU[i][k]));
 			}
 
 			//horizontal addition of value
-			val = mm_hadd<T,regType>(val,val);
-
-			x[i] = (mm_cvts<T,regType>(val));
+			//val = mm_hadd<T,regType>(val,val);
+			T tmp = T(0);
+			for(size_t e = 0; e < col_w; e++) tmp += *((T*)&val+e);
+			x[i] = tmp;
+			//x[i] = (mm_cvts<T,regType>(val));
+			//std::cout << "before flag x[" << i << "] = " << x[i] << endl;
 			//if is doolittle method, divide by LU[i][i]
 			if (isDoolittle) x[i] = x[i]/(LU[i][i]);
+			/*
+
+			std::cout << "x[" << i << "] = " << x[i] << endl;
+
+			std::cout << "==============" << endl;
+			*/
 		}
+
+		//std::cout << "====================================================" << endl;
+
 		//removing innecesary elements of x vector.
 		for(size_t k = LU.cols(); k < LU.dcols(); k++)x.pop_back();
+
+
 		return true;
 
 
@@ -169,12 +287,17 @@ bool solveLUSIMD( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vecto
 template<typename T>
 bool solveLUAux( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector <T>& b){
 		std::vector<size_t> p;
-		Matrix<T> LU,L,U;
+		Matrix<T> LU;//,L,U;
+
 		//Getting the LU matrix and p, the permutation vector
-		//luDoolittle(A,LU,p);
-		//unpackDoolittle(LU,L,U);
-		luCrout(A,LU,p);
-		unpackCrout(LU,L,U);
+		luDoolittle(A,LU,p);
+		//isDoolittle allow to do the doolittle method or crout method
+		//true if is doolittle method
+		//false if not.
+		bool isDoolittle = true;
+		//luCrout(A,LU,p);
+		//bool isDoolittle = false;
+
 
 		//creating a vector y where we'll save the result of y=Lx
 		std::vector<T> y;
@@ -196,10 +319,10 @@ bool solveLUAux( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector
 				//if j != of i add
 				if (j != i)
 					//y[j] is the previous found value
-					val -= L[i][j]*y[j];
+					val -= LU[i][j]*y[j];
 			}
-			//then, divide by the current x_i
-			val /= L[i][i];
+			//if is not doolittle, divide by the current x_i
+			if(!isDoolittle)val /= LU[i][i];
 			//and push the result of this to the vector y
 			y.push_back(val);
 		}
@@ -213,11 +336,16 @@ bool solveLUAux( const anpi::Matrix<T>& A, std::vector <T>& x ,const std::vector
 			val = y[A.rows()- 1 - i];
 			for(size_t j = 0; j < i; j++){
 				if (j != i)
-					val -= U[A.rows()- 1 - i][A.rows()- 1 - j]*x[A.rows()- 1 - j];
+					val -= LU[A.rows()- 1 - i][A.rows()- 1 - j]*x[A.rows()- 1 - j];
 			}
-			val /= U[A.rows()- 1 - i][A.rows()- 1 - i];
+			if (isDoolittle)val /= LU[A.rows()- 1 - i][A.rows()- 1 - i];
 			x[A.rows()- 1 - i] = (val);
 		}
+
+		std::cout << "y = {";
+		for(size_t e = 0; e < y.size()-1; e++)cout << y[e] << ", ";
+		std::cout << y[y.size()-1] << "}" << std::endl;
+
 		return true;
 }
 
